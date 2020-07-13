@@ -1,6 +1,7 @@
 import random
 
 class Game:
+
     def __init__(self):
         self.cells = list()
         self.active_player = "X"
@@ -8,26 +9,46 @@ class Game:
         self.num_x = 0
         self.row = 0
         self.col = 0
+        self.players = {'easy': self.computer_input, 'user': self.user_input}
+        self.player_functions = {}
 
     def play(self):
-        input_string = "_" * 9
-        self.format_cells(input_string)
-        self.print_cells()
+        while self.input_command():
+            input_string = "_" * 9
+            self.format_cells(input_string)
+            self.print_cells()
 
+            while True:
+                self.check_active_player()
+                if self.active_player == "X":
+                    self.player_functions['X']()
+                else:
+                    self.player_functions['O']()
+                self.make_move()
+
+                if self.check_win():
+                    print(self.active_player, "wins\n")
+                    break
+                if self.num_o + self.num_x == 9:
+                    print("Draw\n")
+                    break
+
+    def input_command(self):
+        command_bool = False
         while True:
-            self.check_active_player()
-            if self.active_player == "X":
-                self.user_input()
+            input_list = input("Input command: ").split()
+            if input_list[0] == 'exit' and len(input_list) == 1:
+                break
+            elif input_list[0] == 'start' and len(input_list) == 3 \
+                    and input_list[1] in self.players \
+                    and input_list[2] in self.players:
+                command_bool = True
+                self.player_functions["X"] = self.players[input_list[1]]
+                self.player_functions["O"] = self.players[input_list[2]]
+                break
             else:
-                self.computer_input()
-            self.make_move()
-
-            if self.check_win():
-                print(self.active_player, "wins")
-                break
-            if self.num_o + self.num_x == 9:
-                print("Draw")
-                break
+                print("Bad parameters!")
+        return command_bool
 
     def format_cells(self, input_string):
         cell_list = list(input_string)
@@ -50,8 +71,7 @@ class Game:
                 elif self.cells[-row][col-1] != "_":
                     print("This cell is occupied! Choose another one!")
                 else:
-                    self.row = row
-                    self.col = col
+                    self.row, self.col = row, col
                     break
             else:
                 print("You should enter numbers!")
@@ -85,11 +105,9 @@ class Game:
     def computer_input(self):
         print("Making move level \"easy\"\n")
         while True:
-            row = random.randint(1, 3)
-            col = random.randint(1, 3)
+            row, col = random.randint(1, 3), random.randint(1, 3)
             if self.cells[-row][col-1] == "_":
-                self.row = row
-                self.col = col
+                self.row, self.col = row, col
                 break
 
 
