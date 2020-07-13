@@ -1,3 +1,5 @@
+import random
+
 class Game:
     def __init__(self):
         self.cells = list()
@@ -8,22 +10,23 @@ class Game:
         self.col = 0
 
     def play(self):
-        input_string = input("Enter cells: ")
+        input_string = "_" * 9
         self.format_cells(input_string)
         self.print_cells()
 
         while True:
-            if self.validate_input():
-                self.check_active_player()
-                self.cells[-self.row][self.col-1] = self.active_player
+            self.check_active_player()
+            if self.active_player == "X":
+                self.user_input()
+            else:
+                self.computer_input()
+            self.make_move()
 
-                self.print_cells()
-                if self.check_win():
-                    print(self.active_player, "wins")
-                elif self.num_o + self.num_x == 9:
-                    print("Draw")
-                else:
-                    print("Game not finished\n")
+            if self.check_win():
+                print(self.active_player, "wins")
+                break
+            if self.num_o + self.num_x == 9:
+                print("Draw")
                 break
 
     def format_cells(self, input_string):
@@ -37,29 +40,36 @@ class Game:
         out_str = border + [" ".join(['|'] + x + ['|']) for x in self.cells] + border
         print("\n".join([x.replace("_", " ") for x in out_str]))
 
-    def validate_input(self):
-        input_val = input("Enter the coordinates: ").split()
-        if input_val[0].isdigit():
-            col, row = int(input_val[0]), int(input_val[1])
-            if any(x < 1 or x > 3 for x in [col, row]):
-                print("Coordinates should be from 1 to 3!")
-            elif self.cells[-row][col-1] != "_":
-                print("This cell is occupied! Choose another one!")
+    def user_input(self):
+        while True:
+            input_val = input("Enter the coordinates: ").split()
+            if input_val[0].isdigit():
+                col, row = int(input_val[0]), int(input_val[1])
+                if any(x < 1 or x > 3 for x in [col, row]):
+                    print("Coordinates should be from 1 to 3!")
+                elif self.cells[-row][col-1] != "_":
+                    print("This cell is occupied! Choose another one!")
+                else:
+                    self.row = row
+                    self.col = col
+                    break
             else:
-                self.row = row
-                self.col = col
-                return True
+                print("You should enter numbers!")
+
+    def make_move(self):
+        self.check_active_player()
+        self.cells[-self.row][self.col-1] = self.active_player
+        if self.active_player == "X":
+            self.num_x += 1
         else:
-            print("You should enter numbers!")
-        return False
+            self.num_o += 1
+        self.print_cells()
 
     def check_active_player(self):
         if self.num_o == self.num_x:
             self.active_player = "X"
-            self.num_x += 1
         else:
             self.active_player = "O"
-            self.num_o += 1
 
     def check_win(self):
         if any([all([y == self.active_player for y in x]) for x in self.cells]):
@@ -71,6 +81,16 @@ class Game:
         if all([self.cells[i][-i-1] == self.active_player for i in range(3)]):
             return True
         return False
+
+    def computer_input(self):
+        print("Making move level \"easy\"\n")
+        while True:
+            row = random.randint(1, 3)
+            col = random.randint(1, 3)
+            if self.cells[-row][col-1] == "_":
+                self.row = row
+                self.col = col
+                break
 
 
 my_game = Game()
