@@ -1,27 +1,66 @@
 import random
 
+class Board:
+    def __init__(self):
+        self.cells = dict()
+
+    def print(self):
+        border = ['-' * 9]
+        frame = border + [" ".join(['|'] + [self.cells.get((i, j), ' ') for j in range(3)] + ['|']) for i in range(3)] + border
+        print("\n".join(frame))
+
+    def fill_position(self, row, col, value):
+        self.cells[(3-row, col - 1)] = value
+
+
 class Player:
-    def __init__(self, shape):
-        self.shape = shape
+    def __init__(self, value, board):
+        self.value = value
+        self.board = board
         self.row = 0
         self.col = 0
-        self.num_moves = 0
         self.played = False
 
-    def make_move(self, cells):
-        cells[-self.row][self.col-1] = self.shape
-        self.num_moves += 1
+    def take_input(self):
+        pass
+
+    def make_move(self):
+        self.board.fill_position(self.row, self.col, self.value)
         self.played = not self.played
 
+    def check_win(self):
+        if any([all([self.board.cells.get((i, j), "") == self.value for j in range(3)]) for i in range(3)]):
+            return True
+        if any([all([self.board.cells.get((j, i), "") == self.value for j in range(3)]) for i in range(3)]):
+            return True
+        if all([self.board.cells.get((i, i), "") == self.value for i in range(3)]):
+            return True
+        if all([self.board.cells.get((i, 3-i-1)) == self.value for i in range(3)]):
+            return True
+        return False
+
+    def play(self):
+        self.take_input()
+        self.make_move()
+        self.board.print()
+        if self.check_win():
+            print(self.value, "wins\n")
+            return True
+        if len(self.board.cells) == 9:
+            print("Draw\n")
+            return True
+        return False
+
+
 class User(Player):
-    def take_input(self, cells):
+    def take_input(self):
         while True:
             input_val = input("Enter the coordinates: ").split()
             if input_val[0].isdigit():
                 col, row = int(input_val[0]), int(input_val[1])
                 if any(x < 1 or x > 3 for x in [col, row]):
                     print("Coordinates should be from 1 to 3!")
-                elif cells[-row][col-1] != "_":
+                elif self.board.cells.get((3-row, col-1), '') != '':
                     print("This cell is occupied! Choose another one!")
                 else:
                     self.row, self.col = row, col
@@ -29,82 +68,47 @@ class User(Player):
             else:
                 print("You should enter numbers!")
 
-
 class Computer(Player):
-    def take_input(self, cells):
+    def take_input(self):
         print("Making move level \"easy\"\n")
         while True:
-            row, col = random.randint(1, 3), random.randint(1, 3)
-            if cells[-row][col-1] == "_":
+            col, row = random.randint(1, 3), random.randint(1, 3)
+            if self.board.cells.get((3-row, col-1), '') == '':
                 self.row, self.col = row, col
                 break
 
-class Game2:
-    def __init__(self, player1, player2):
-        self.player1 = player1
-        self.player2 = player2
-        self.num_moves = player1.num_moves + player2.num_moves
-        self.cells = [list('___') for i in range(3)]
+class Game:
+    def __init__(self):
+        self.player1 = None
+        self.player2 = None
+        self.board = Board()
+        self.player_modes = {'easy': Computer, 'user': User}
 
     def play(self):
-        self.print_cells()
+        while self.select_players():
+            self.board.print()
+            while True:
+                if self.player1.play():
+                    break
+                if self.player2.play():
+                    break
+
+    def select_players(self):
+        select_bool = False
         while True:
-            if self.playerAction(self.player1):
+            input_list = input("Input command: ").split()
+            if input_list[0] == 'exit' and len(input_list) == 1:
                 break
-            if self.playerAction(self.player2):
+            elif input_list[0] == 'start' and len(input_list) == 3 \
+                    and input_list[1] in self.player_modes \
+                    and input_list[2] in self.player_modes:
+                select_bool = True
+                self.board = Board()
+                self.player1 = self.player_modes[input_list[1]]("X", self.board)
+                self.player2 = self.player_modes[input_list[2]]("O", self.board)
                 break
+            else:
+                print("Bad parameters!")
+        return select_bool
 
-
-    def playerAction(self, player):
-        player.take_input(self.cells)
-        player.make_move(self.cells)
-        self.num_moves += 1
-        self.print_cells()
-        if self.check_win(player.shape):
-            print(player.shape, "wins\n")
-            return True
-        if self.num_moves == 9:
-            print("Draw\n")
-            return True
-        return False
-
-    def print_cells(self):
-        border = ['-' * 9]
-        out_str = border + [" ".join(['|'] + x + ['|']) for x in self.cells] + border
-        print("\n".join([x.replace("_", " ") for x in out_str]))
-
-    def check_win(self, shape):
-        if any([all([y == shape for y in x]) for x in self.cells]):
-            return True
-        if any([all([self.cells[j][i] == shape for j in range(3)]) for i in range(3)]):
-            return True
-        if all([self.cells[i][i] == shape for i in range(3)]):
-            return True
-        if all([self.cells[i][-i-1] == shape for i in range(3)]):
-            return True
-        return False
-
-
-
-while True:
-    input_list = input("Input command: ").split()
-    if input_list[0] == 'exit' and len(input_list) == 1:
-        break
-    elif input_list[0] == 'start' and len(input_list) == 3 \
-            and input_list[1] in ['easy', 'user'] \
-            and input_list[2] in ['easy', 'user']:
-        command_bool = True
-        if input_list[1] == 'easy':
-            player1 = Computer("X")
-        else:
-            player1 = User("X")
-        if input_list[2] == 'easy':
-            player2 = Computer("O")
-        else:
-            player2 = User("O")
-        my_game = Game2(player1, player2)
-        my_game.play()
-    else:
-        print("Bad parameters!")
-
-
+Game().play()
