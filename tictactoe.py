@@ -1,41 +1,53 @@
 import random
 
+
+class Position:
+    def __init__(self, x, y):
+        self.x = x
+        self.y = y
+
+
 class Board:
     def __init__(self):
         self.cells = dict()
 
     def print(self):
         border = ['-' * 9]
-        frame = border + [" ".join(['|'] + [self.cells.get((i, j), ' ') for j in range(3)] + ['|']) for i in range(3)] + border
+        frame = border + [" ".join(['|'] + [self.get_value(Position(i, j)) for i in range(1, 4)] + ['|']) for j in reversed(range(1, 4))] + border
         print("\n".join(frame))
 
-    def fill_position(self, row, col, value):
-        self.cells[(3-row, col - 1)] = value
+    def add_value(self, position, value):
+        self.cells[(position.x, position.y)] = value
+
+    def get_value(self, position):
+        return self.cells.get((position.x, position.y), " ")
+
+    def delete_value(self, position):
+        del self.cells[(position.x, position.y)]
 
 
 class Player:
     def __init__(self, value, board):
         self.value = value
         self.board = board
-        self.row = 0
-        self.col = 0
+        self.position = None
         self.played = False
 
     def take_input(self):
         pass
 
     def make_move(self):
-        self.board.fill_position(self.row, self.col, self.value)
+        self.board.add_value(self.position, self.value)
         self.played = not self.played
 
-    def check_win(self):
-        if any([all([self.board.cells.get((i, j), "") == self.value for j in range(3)]) for i in range(3)]):
+    def check_win(self, value):
+        if any([all([self.board.get_value(Position(i, j)) == value for i in range(1, 4)]) for j in range(1, 4)]):
             return True
-        if any([all([self.board.cells.get((j, i), "") == self.value for j in range(3)]) for i in range(3)]):
+        if any([all([self.board.get_value(Position(i, j)) == value for j in range(1, 4)]) for i in range(1, 4)]):
             return True
-        if all([self.board.cells.get((i, i), "") == self.value for i in range(3)]):
+        if all([self.board.get_value(Position(i, i)) == value for i in range(1, 4)]):
             return True
-        if all([self.board.cells.get((i, 3-i-1)) == self.value for i in range(3)]):
+        if all([self.board.get_value(Position(i, 4 - i)) == value for i in range(1, 4)]):
             return True
         return False
 
@@ -43,7 +55,7 @@ class Player:
         self.take_input()
         self.make_move()
         self.board.print()
-        if self.check_win():
+        if self.check_win(self.value):
             print(self.value, "wins\n")
             return True
         if len(self.board.cells) == 9:
@@ -51,38 +63,81 @@ class Player:
             return True
         return False
 
+    def set_random_input(self):
+        while True:
+            loc_position = Position(random.randint(1, 3), random.randint(1, 3))
+            if self.board.get_value(loc_position) == ' ':
+                self.position = loc_position
+                break
+
 
 class User(Player):
     def take_input(self):
         while True:
             input_val = input("Enter the coordinates: ").split()
             if input_val[0].isdigit():
-                col, row = int(input_val[0]), int(input_val[1])
-                if any(x < 1 or x > 3 for x in [col, row]):
+                x, y = int(input_val[0]), int(input_val[1])
+                if any(x < 1 or x > 3 for x in [x, y]):
                     print("Coordinates should be from 1 to 3!")
-                elif self.board.cells.get((3-row, col-1), '') != '':
+                elif self.board.get_value(Position(x, y)) != ' ':
                     print("This cell is occupied! Choose another one!")
                 else:
-                    self.row, self.col = row, col
+                    self.position = Position(x, y)
                     break
             else:
                 print("You should enter numbers!")
 
-class Computer(Player):
+
+class Easy(Player):
     def take_input(self):
         print("Making move level \"easy\"\n")
-        while True:
-            col, row = random.randint(1, 3), random.randint(1, 3)
-            if self.board.cells.get((3-row, col-1), '') == '':
-                self.row, self.col = row, col
-                break
+        self.set_random_input()
+
+
+class Medium(Player):
+    def take_input(self):
+        print("Making move level \"medium\"\n")
+
+        if not self.check_move_ahead():
+            self.set_random_input()
+
+    def check_move_ahead(self):
+        return self.one_move_win() or self.opponent_win()
+
+    def one_move_win(self):
+        for i in range(1, 4):
+            for j in range(1, 4):
+                t_pos = Position(i, j)
+                if self.board.get_value(t_pos) == ' ' and \
+                        self.test_win(t_pos, self.value):
+                    self.board.add_value(t_pos, self.value)
+                    return True
+        return False
+
+    def opponent_win(self):
+        for i in range(1, 4):
+            for j in range(1, 4):
+                t_pos = Position(i, j)
+                if self.board.get_value(t_pos) == ' ':
+                    o_value = 'O' if self.value == 'X' else 'X'
+                    if self.test_win(t_pos, o_value):
+                        self.board.add_value(t_pos, self.value)
+                        return True
+        return False
+
+    def test_win(self, position, value):
+        self.board.add_value(position, value)
+        is_win = self.check_win(value)
+        self.board.delete_value(position)
+        return is_win
+
 
 class Game:
     def __init__(self):
         self.player1 = None
         self.player2 = None
         self.board = Board()
-        self.player_modes = {'easy': Computer, 'user': User}
+        self.player_modes = {'easy': Easy, 'user': User, 'medium': Medium}
 
     def play(self):
         while self.select_players():
