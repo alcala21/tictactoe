@@ -1,5 +1,6 @@
 import random
 
+
 class Board:
     def __init__(self):
         self.used_cells = dict()
@@ -22,8 +23,24 @@ class Board:
         self.empty_cells.append(position)
 
     def is_occupied(self, position):
-        if position in self.used_cells:
+        return position in self.used_cells
+
+    def check_win(self, value):
+        if any([all([self.get_value((i, j)) == value for i in range(1, 4)]) for j in range(1, 4)]):
             return True
+        if any([all([self.get_value((i, j)) == value for j in range(1, 4)]) for i in range(1, 4)]):
+            return True
+        if all([self.get_value((i, i)) == value for i in range(1, 4)]):
+            return True
+        if all([self.get_value((i, 4 - i)) == value for i in range(1, 4)]):
+            return True
+        return False
+
+    def is_empty(self):
+        return len(self.empty_cells) == 9
+
+    def is_full(self):
+        return len(self.used_cells) == 9
 
 
 class Player:
@@ -39,27 +56,16 @@ class Player:
     def make_move(self):
         self.board.add_value(self.position, self.value)
 
-    def check_win(self, value):
-        if any([all([self.board.get_value((i, j)) == value for i in range(1, 4)]) for j in range(1, 4)]):
-            return True
-        if any([all([self.board.get_value((i, j)) == value for j in range(1, 4)]) for i in range(1, 4)]):
-            return True
-        if all([self.board.get_value((i, i)) == value for i in range(1, 4)]):
-            return True
-        if all([self.board.get_value((i, 4 - i)) == value for i in range(1, 4)]):
-            return True
-        return False
-
     def play(self):
         if self.__str__():
             print(self.__str__())
         self.take_input()
         self.make_move()
         self.board.print()
-        if self.check_win(self.value):
+        if self.board.check_win(self.value):
             print(self.value, "wins\n")
             return True
-        if len(self.board.used_cells) == 9:
+        if self.board.is_full():
             print("Draw\n")
             return True
         return False
@@ -121,16 +127,17 @@ class Medium(Player):
 
     def test_win(self, position, value):
         self.board.add_value(position, value)
-        is_win = self.check_win(value)
+        is_win = self.board.check_win(value)
         self.board.delete_value(position)
         return is_win
+
 
 class Hard(Player):
     def __str__(self):
         return "Making move level \"hard\"\n"
 
     def take_input(self):
-        self.set_random_input()
+        self.position, _ = minimax(self.board, self.o_value, True)
 
 
 class Game:
@@ -167,5 +174,31 @@ class Game:
             else:
                 print("Bad parameters!")
         return select_bool
+
+
+def minimax(loc_board, prev_value, maximize=True):
+    amount = -10 if maximize else 10
+    is_win = loc_board.check_win(prev_value)
+    if is_win:
+        return list(loc_board.used_cells)[-1], amount
+    elif loc_board.is_full():
+        return list(loc_board.used_cells)[-1], 0
+    elif loc_board.is_empty():
+        return random.choice(loc_board.empty_cells), 0
+    else:
+        pos_dict = dict()
+        loc_value = "X" if prev_value == "O" else "O"
+        for position in loc_board.empty_cells[:]:
+            loc_board.add_value(position, loc_value)
+            _, val = minimax(loc_board, loc_value, not maximize)
+            loc_board.delete_value(position)
+            pos_dict[position] = val
+        if maximize:
+            max_pos = max(pos_dict, key=lambda x: pos_dict[x])
+            return max_pos, pos_dict[max_pos]
+        else:
+            min_pos = min(pos_dict, key=lambda x: pos_dict[x])
+            return min_pos, pos_dict[min_pos]
+
 
 Game().play()
